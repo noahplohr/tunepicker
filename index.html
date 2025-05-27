@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiddle Tune Picker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 50px;
+      background: #000;
+      color: #fff;
+      text-shadow: 1px 1px 4px #000;
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("https://t3.ftcdn.net/jpg/03/40/16/64/240_F_340166493_N8skuPCFELpvbf0iHlwRTfeiq88khDUu.jpg") center center no-repeat;
+      background-size: cover;
+      z-index: -2;
+      filter: brightness(0.4);
+    }
+
+    button {
+      font-size: 1em;
+      padding: 5px 10px;
+      border: none;
+      background-color: #2aa198;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 2px 6px;
+    }
+
+    button:hover {
+      background-color: #4f17a3;
+    }
+
+    #tuneDisplay, #randomKey, #tempo {
+      display: inline-block;
+      min-width: 200px;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .spin {
+      animation: spin 0.4s ease-in-out;
+    }
+
+    @keyframes spin {
+      0%   { transform: rotateX(0); }
+      50%  { transform: rotateX(90deg); opacity: 0.5; }
+      100% { transform: rotateX(0); opacity: 1; }
+    }
+
+    .parameter {
+      font-size: 1.3em;
+      margin-top: 20px;
+    }
+
+    #settings {
+      margin-top: 30px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-group label {
+      margin: 5px 10px;
+    }
+
+    .slider-group {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type=range] {
+      width: 150px;
+    }
+
+    .mobile #settings button,
+    .mobile #settings input[type=range] {
+      width: 100%;
+      max-width: 300px;
+      margin: 6px auto;
+      display: block;
+    }
+
+    .mobile .slider-group {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 15px;
+    }
+
+    .mobile .checkbox-group {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  </style>
+</head>
+<body>
+  <h1>Random Fiddle Tune Picker</h1>
+  <p>Click the button to get a random tune, key, and tempo to practice.</p>
+  <button onclick="startTuneAnimation()">New Set</button>
+
+  <div class="parameter">
+    Tune: <span id="tuneDisplay">–</span>
+    <button onclick="rerollTune()">new tune</button>
+  </div>
+
+  <div class="parameter">
+    Key: <span id="randomKey">–</span>
+    <button onclick="rerollKey()">new key</button>
+  </div>
+
+  <div class="parameter">
+    Tempo: <span id="tempo">–</span> bpm
+    <button onclick="rerollTempo()">new tempo</button>
+  </div>
+
+  <div id="settings">
+    <h2>Settings</h2>
+    <button onclick="toggleLayout()">Toggle Mobile/Desktop</button>
+    <div class="checkbox-group" id="keyCheckboxes"></div>
+    <div class="slider-group">
+      <label>Tempo Range: <span id="tempoMinLabel"></span> – <span id="tempoMaxLabel"></span> bpm</label>
+      <input type="range" id="tempoMin" min="60" max="200" step="5">
+      <input type="range" id="tempoMax" min="60" max="200" step="5">
+    </div>
+    <div style="margin-top: 10px;">
+      <button onclick="resetSettings()">Reset</button>
+      <button onclick="savePreset()">Save</button>
+      <button onclick="loadPreset()">Recall</button>
+    </div>
+  </div>
+
+  <script>
+    const tunes = [
+      "Alabama Jubilee", "All of Me", "Angelina Baker", "Arapaho", "Arkansas Traveler",
+      "Ashland Breakdown", "Ashokan Farewell", "Back Up and Push", "Beaumont Rag", "Big Country",
+      "Big Mon", "Big Sandy River", "Big Sciota", "Bill Cheatham", "Billy in the Lowground",
+      "Black Mountain Rag", "Blackberry Blossom", "Blue Bossa", "Bluegrass Breakdown", "Bluegrass Stomp",
+      "Buffalo Gals", "Bully of the Town", "Camptown Races", "Cattle in the Cane", "Cherokee Shuffle",
+      "Cheyenne", "Chinquapin Hunting", "Cindy", "Clinch Mountain Backstep", "Cluck Old Hen",
+      "Cold Frosty Morning", "Cooley’s Reel", "Cowboys and Indians", "Crazy Creek", "Cripple Creek",
+      "Cuckoo's Nest", "Cumberland Gap", "Daley's Reel", "Daybreak in Dixie", "Dear Old Dixie",
+      "Devil's Dream", "Devlin", "Doug's Tune", "Dusty Miller", "Earl's Breakdown", "East Tennessee Blues",
+      "Eighth of January", "El Cumbanchero", "Elk River Blues", "EMD", "Farewell Blues",
+      "Fireball", "Fireball Mail", "Fish Caught a Bird", "Fisher's Hornpipe", "Flint Hill Special",
+      "Flop Eared Mule", "Foggy Mountain Breakdown", "Foggy Mountain Chimes", "Forked Deer", "Freight Train",
+      "Glory in the Meeting House", "Gold Rush", "Golden Slippers", "Goodbye Liza Jane",
+      "Grandfather's Clock", "Grey Eagle", "Grey Owl", "Hangman's Reel", "Hartford’s Real",
+      "Hunting the Buffalo", "I Am a Pilgrim", "Ice Bridges", "Itzbin Reel", "Jerusalem Ridge",
+      "John Brown's Dream", "John Hardy", "John Henry", "Josie Girl", "Julianne Johnson", "June Apple",
+      "Kentucky Mandolin", "Kentucky Waltz", "Kitchen Girl", "Lady Be Good", "Leather Britches",
+      "Limehouse Blues", "Little Rock Getaway", "Live, Love, Fingerboard", "Lonesome Fiddle Blues",
+      "Lonesome Road Blues", "Lost Indian", "Maury River Blues", "Methodist Preacher", 
+      "Monroe's Hornpipe", "Nail That Catfish to the Tree", "Nashville Blues", "New Camptown Races",
+      "New Five Cents", "Old Dangerfield", "Old Grimes", "Old Joe Clark", "Old Spinning Wheel",
+      "Over the Waterfall", "Paddy on the Turnpike", "Panhandle Rag", "Plastic Banana", "Port Tobacco",
+      "Ragtime Annie", "Rawhide", "Rebecca", "Red Haired Boy", "Red Prairie Dawn", "Red Wing",
+      "Remington Ride", "Reuben's Train", "Richmond", "Road to Columbus", "Roanoke", "Sail Away Ladies",
+      "Saint Anne's Reel", "Sally Ann", "Salt Creek", "Salt Spring", "Shady Grove", "Shenandoah Valley Breakdown",
+      "Shove That Pig’s Foot Further in the Fire", "Shuckin' the Corn", "Sledd Ridin'", "Soldier's Joy",
+      "Spider Bit the Fiddler", "Squirrel Hunters", "Steam Powered Aereo Plane", "Stoney Creek", "Stony Point",
+      "Studebaker", "Summertime", "Sweet Georgia Brown", "Swing 42", "Telluride", "Temperance Reel",
+      "Texas Gales", "Theme Time", "Tipper", "Train 45", "Turkey in the Straw", "Under the Double Eagle",
+      "Washington County", "Watson's Blues", "Waynesboro", "Wheel Hoss", "Whiskey Before Breakfast",
+      "Whiteface", "Whitewater", "Wildwood Flower"
+    ];
+
+    const originalKeys = [
+      "A", "C", "D", "Am", "D",
+      "C", "D", "C", "C", "E",
+      "A", "A", "G", "A", "C",
+      "A/D", "G", "Cm", "G", "G",
+      "C", "A", "C", "A", "A",
+      "Bb", "D", "G", "A", "A", /*-----30*/
+      "Am", "Em", "Cm", "A", "A",
+      "D", "D", "Bb", "A", "G",
+      "A", "E", "A", "A", "G", "C",
+      "D", "Dm", "G", "Em", "C",
+      "G", "G", "A", "D", "G",/*56*/
+      "G", "G","G", "D", "C", "E",
+      "A", "G", "A",
+      "G", "A", "D", "A", "G", /*70*/
+      "A", "G", "Dm", "A", "Am",/*75*/
+      "A", "G", "D", "G", "D", "A",/*81*/
+      "Gm", "C", "A", "G", "G",/*86*/
+      "G", "C", "G", "Dm", "G",/*91*/
+      "D", "Am", "G",
+      "A", "G", "Dm", "Bb", "D",/*100*/
+      "A", "D", "A", "D", "D",/*105*/
+      "G", "D", "D", "A", "D",/*110*/
+      "C", "B", "A", "A", "G",/*115*/
+      "G", "D", "A", "A", "G", /*120*/
+      "G","D", "A", "A","A", "Dm", "A",/*127*/
+      "G", "A","A","D","Dm","A",/*133*/
+      "G","A","G", "B", "Em",/*138*/
+      "F", "C", "G", "G", "C",/*143*/
+      "A", "G", "B", "G","C", "A", "E" ,"G",/*151*/
+      "G","D", "Em", "A", "C"
+    ];
+ const allKeys = ["A", "B♭", "B", "C", "D", "E♭", "E", "F", "G"];
+    let enabledKeys = [...allKeys];
+    let tempoMin = 80;
+    let tempoMax = 130;
+    let preset = null;
+
+    function applySpin(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('spin');
+      void el.offsetWidth;
+      el.classList.add('spin');
+    }
+
+    function startTuneAnimation() {
+      let counter = 0;
+      const interval = 50;
+      const totalDuration = 2000;
+      const steps = totalDuration / interval;
+      const tuneDisplay = document.getElementById("tuneDisplay");
+
+      const anim = setInterval(() => {
+        tuneDisplay.innerText = tunes[Math.floor(Math.random() * tunes.length)];
+        counter++;
+        if (counter >= steps) {
+          clearInterval(anim);
+          pickAll();
+        }
+      }, interval);
+    }
+
+    function pickAll() {
+      rerollTune();
+      rerollKey();
+      rerollTempo();
+    }
+
+    function rerollTune() {
+      const index = Math.floor(Math.random() * tunes.length);
+      const tune = tunes[index];
+      const originalKey = originalKeys[index] || "–";
+      document.getElementById("tuneDisplay").innerText = `${tune} (Original: ${originalKey})`;
+      applySpin("tuneDisplay");
+    }
+
+    function rerollKey() {
+      if (enabledKeys.length === 0) return;
+      const key = enabledKeys[Math.floor(Math.random() * enabledKeys.length)];
+      document.getElementById("randomKey").innerText = key;
+      applySpin("randomKey");
+    }
+
+    function rerollTempo() {
+      const tempo = Math.floor((Math.random() * ((tempoMax - tempoMin) / 5 + 1)) * 5) + tempoMin;
+      document.getElementById("tempo").innerText = tempo;
+      applySpin("tempo");
+    }
+
+    function renderSettings() {
+      const container = document.getElementById("keyCheckboxes");
+      container.innerHTML = "";
+      allKeys.forEach(key => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = key;
+        checkbox.checked = enabledKeys.includes(key);
+        checkbox.onchange = () => {
+          if (checkbox.checked) {
+            if (!enabledKeys.includes(key)) enabledKeys.push(key);
+          } else {
+            enabledKeys = enabledKeys.filter(k => k !== key);
+          }
+        };
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(` ${key}`));
+        container.appendChild(label);
+      });
+
+      const minSlider = document.getElementById("tempoMin");
+      const maxSlider = document.getElementById("tempoMax");
+      const minLabel = document.getElementById("tempoMinLabel");
+      const maxLabel = document.getElementById("tempoMaxLabel");
+
+      minSlider.value = tempoMin;
+      maxSlider.value = tempoMax;
+      minLabel.textContent = tempoMin;
+      maxLabel.textContent = tempoMax;
+
+      minSlider.oninput = () => {
+        tempoMin = parseInt(minSlider.value);
+        if (tempoMin > tempoMax) tempoMin = tempoMax;
+        minLabel.textContent = tempoMin;
+      };
+
+      maxSlider.oninput = () => {
+        tempoMax = parseInt(maxSlider.value);
+        if (tempoMax < tempoMin) tempoMax = tempoMin;
+        maxLabel.textContent = tempoMax;
+      };
+    }
+
+    function resetSettings() {
+      enabledKeys = [...allKeys];
+      tempoMin = 80;
+      tempoMax = 130;
+      renderSettings();
+    }
+
+    function savePreset() {
+      preset = {
+        enabledKeys: [...enabledKeys],
+        tempoMin,
+        tempoMax
+      };
+    }
+
+    function loadPreset() {
+      if (!preset) return;
+      enabledKeys = [...preset.enabledKeys];
+      tempoMin = preset.tempoMin;
+      tempoMax = preset.tempoMax;
+      renderSettings();
+    }
+
+    function toggleLayout() {
+      document.body.classList.toggle("mobile");
+    }
+
+    renderSettings();
+  </script>
+</body>
+</html>
