@@ -49,7 +49,11 @@
     .parameter {
       font-size: 1.3em;
       margin-top: 20px;
+      display: inline-flex;       /* changed */
+      flex-direction: column;     /* stack vertically */
+      align-items: center;        /* center horizontally */
     }
+
 
     #tuneDisplay, #randomKey, #tempo {
       display: inline-block;
@@ -59,7 +63,7 @@
     }
 
     #originalKey {
-      font-size: 0.9em;
+      font-size: 0.8em;
       margin-top: 5px;
       color: #ccc;
     }
@@ -120,13 +124,16 @@
   </style>
 </head>
 <body>
-  <h1>Random Fiddle Tune Picker</h1>
-  <button onclick="startTuneAnimation()">New Tune</button>
+  <h1 onclick="startTuneAnimation()" style="cursor:pointer;">Random Fiddle Tune Picker</h1>
 
-  <div class="parameter">
-    Tune: <span id="tuneDisplay" onclick="rerollTune()">–</span>
-    <div id="originalKey"></div>
+  <div class="parameter" style="text-align: left; display: inline-block; min-width: 200px;">
+    Tune: 
+    <span style="display: inline-block; vertical-align: top; min-width: 120px;">
+      <span id="tuneDisplay" onclick="rerollTune()" style="cursor: pointer; display: block; text-align: center;">–</span>
+      <div id="originalKey" style="font-size: 0.8em; color: #ccc; margin-top: 5px; text-align: center;"></div>
+    </span>
   </div>
+
 
   <div class="parameter" id="keySection">
     Key: <span id="randomKey" onclick="rerollKey()">–</span>
@@ -351,11 +358,25 @@
         document.getElementById("showTempoCheckbox").checked ? "block" : "none";
     }
 
-    document.getElementById("showKeyCheckbox").addEventListener("change", updateVisibility);
-    document.getElementById("showTempoCheckbox").addEventListener("change", updateVisibility);
+    // Initialize
+    window.onload = () => {
+      renderSettings();
+      resetSettings();
+      updateVisibility();
+      pickAll();
 
-    renderSettings();
-    updateVisibility();
+      document.getElementById("showKeyCheckbox").onchange = () => {
+        updateVisibility();
+      };
+
+      document.getElementById("showTempoCheckbox").onchange = () => {
+        updateVisibility();
+      };
+
+      // Hide settings initially
+      toggleSettings();
+    };
   </script>
 </body>
 </html>
+
