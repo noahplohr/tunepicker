@@ -46,10 +46,22 @@
       background-color: #4f17a3;
     }
 
+    .parameter {
+      font-size: 1.3em;
+      margin-top: 20px;
+    }
+
     #tuneDisplay, #randomKey, #tempo {
       display: inline-block;
       min-width: 200px;
       transition: transform 0.3s ease-in-out;
+      cursor: pointer;
+    }
+
+    #originalKey {
+      font-size: 0.9em;
+      margin-top: 5px;
+      color: #ccc;
     }
 
     .spin {
@@ -60,11 +72,6 @@
       0%   { transform: rotateX(0); }
       50%  { transform: rotateX(90deg); opacity: 0.5; }
       100% { transform: rotateX(0); opacity: 1; }
-    }
-
-    .parameter {
-      font-size: 1.3em;
-      margin-top: 20px;
     }
 
     #settings {
@@ -97,61 +104,60 @@
       width: 150px;
     }
 
-    .mobile #settings button,
-    .mobile #settings input[type=range] {
-      width: 100%;
-      max-width: 300px;
-      margin: 6px auto;
-      display: block;
+    #toggleSettingsBtn {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.9em;
+      opacity: 0.8;
+      padding: 4px 10px;
     }
 
-    .mobile .slider-group {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 15px;
-    }
-
-    .mobile .checkbox-group {
-      flex-direction: column;
-      align-items: flex-start;
+    #keySection, #tempoSection {
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
 <body>
   <h1>Random Fiddle Tune Picker</h1>
-  <p>Click the button to get a random tune, key, and tempo to practice.</p>
-  <button onclick="startTuneAnimation()">New Set</button>
+  <button onclick="startTuneAnimation()">New Tune</button>
 
   <div class="parameter">
-    Tune: <span id="tuneDisplay">–</span>
-    <button onclick="rerollTune()">new tune</button>
+    Tune: <span id="tuneDisplay" onclick="rerollTune()">–</span>
+    <div id="originalKey"></div>
   </div>
 
-  <div class="parameter">
-    Key: <span id="randomKey">–</span>
-    <button onclick="rerollKey()">new key</button>
+  <div class="parameter" id="keySection">
+    Key: <span id="randomKey" onclick="rerollKey()">–</span>
   </div>
 
-  <div class="parameter">
-    Tempo: <span id="tempo">–</span> bpm
-    <button onclick="rerollTempo()">new tempo</button>
+  <div class="parameter" id="tempoSection">
+    Tempo: <span id="tempo" onclick="rerollTempo()">– bpm</span>
   </div>
 
   <div id="settings">
     <h2>Settings</h2>
-    <button onclick="toggleLayout()">Toggle Mobile/Desktop</button>
+
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="showKeyCheckbox" checked> Show Key</label>
+      <label><input type="checkbox" id="showTempoCheckbox" checked> Show Tempo</label>
+    </div>
+
     <div class="checkbox-group" id="keyCheckboxes"></div>
+
     <div class="slider-group">
       <label>Tempo Range: <span id="tempoMinLabel"></span> – <span id="tempoMaxLabel"></span> bpm</label>
       <input type="range" id="tempoMin" min="60" max="200" step="5">
       <input type="range" id="tempoMax" min="60" max="200" step="5">
     </div>
+
     <div style="margin-top: 10px;">
       <button onclick="resetSettings()">Reset</button>
-      <button onclick="savePreset()">Save</button>
-      <button onclick="loadPreset()">Recall</button>
     </div>
   </div>
+
+  <button id="toggleSettingsBtn" onclick="toggleSettings()">Settings</button>
 
   <script>
     const tunes = [
@@ -220,11 +226,11 @@
       "A", "G", "B", "G","C", "A", "E" ,"G",/*151*/
       "G","D", "Em", "A", "C"
     ];
- const allKeys = ["A", "B♭", "B", "C", "D", "E♭", "E", "F", "G"];
+
+    const allKeys = ["A", "B♭", "B", "C", "D", "E♭", "E", "F", "G"];
     let enabledKeys = [...allKeys];
     let tempoMin = 80;
     let tempoMax = 130;
-    let preset = null;
 
     function applySpin(id) {
       const el = document.getElementById(id);
@@ -260,7 +266,8 @@
       const index = Math.floor(Math.random() * tunes.length);
       const tune = tunes[index];
       const originalKey = originalKeys[index] || "–";
-      document.getElementById("tuneDisplay").innerText = `${tune} (Original: ${originalKey})`;
+      document.getElementById("tuneDisplay").innerText = tune;
+      document.getElementById("originalKey").innerText = `(Original: ${originalKey})`;
       applySpin("tuneDisplay");
     }
 
@@ -272,8 +279,9 @@
     }
 
     function rerollTempo() {
-      const tempo = Math.floor((Math.random() * ((tempoMax - tempoMin) / 5 + 1)) * 5) + tempoMin;
-      document.getElementById("tempo").innerText = tempo;
+      const stepCount = Math.floor((tempoMax - tempoMin) / 5) + 1;
+      const tempo = tempoMin + Math.floor(Math.random() * stepCount) * 5;
+      document.getElementById("tempo").innerText = `${tempo} bpm`;
       applySpin("tempo");
     }
 
@@ -325,30 +333,29 @@
       enabledKeys = [...allKeys];
       tempoMin = 80;
       tempoMax = 130;
+      document.getElementById("showKeyCheckbox").checked = true;
+      document.getElementById("showTempoCheckbox").checked = true;
+      updateVisibility();
       renderSettings();
     }
 
-    function savePreset() {
-      preset = {
-        enabledKeys: [...enabledKeys],
-        tempoMin,
-        tempoMax
-      };
+    function toggleSettings() {
+      const settings = document.getElementById("settings");
+      settings.style.display = settings.style.display === "none" ? "block" : "none";
     }
 
-    function loadPreset() {
-      if (!preset) return;
-      enabledKeys = [...preset.enabledKeys];
-      tempoMin = preset.tempoMin;
-      tempoMax = preset.tempoMax;
-      renderSettings();
+    function updateVisibility() {
+      document.getElementById("keySection").style.display =
+        document.getElementById("showKeyCheckbox").checked ? "block" : "none";
+      document.getElementById("tempoSection").style.display =
+        document.getElementById("showTempoCheckbox").checked ? "block" : "none";
     }
 
-    function toggleLayout() {
-      document.body.classList.toggle("mobile");
-    }
+    document.getElementById("showKeyCheckbox").addEventListener("change", updateVisibility);
+    document.getElementById("showTempoCheckbox").addEventListener("change", updateVisibility);
 
     renderSettings();
+    updateVisibility();
   </script>
 </body>
 </html>
